@@ -952,6 +952,35 @@ TEST(cli_ensure_path_dry_run) {
     PASS();
 }
 
+/* issue #319: a fish config must get fish-native syntax, never `export PATH=`
+ * (which is a syntax error in fish and breaks config.fish). */
+TEST(cli_ensure_path_fish_syntax_issue319) {
+    char tmpdir[256];
+    snprintf(tmpdir, sizeof(tmpdir), "/tmp/cli-path-XXXXXX");
+    if (!cbm_mkdtemp(tmpdir))
+        SKIP("cbm_mkdtemp failed");
+
+    char rcfile[512];
+    snprintf(rcfile, sizeof(rcfile), "%s/config.fish", tmpdir);
+    write_test_file(rcfile, "# existing fish config\n");
+
+    int rc = cbm_ensure_path("/usr/local/bin", rcfile, false);
+    ASSERT_EQ(rc, 0);
+
+    const char *data = read_test_file(rcfile);
+    ASSERT_NOT_NULL(data);
+    /* fish-native form, and NO sh-style export. */
+    ASSERT(strstr(data, "fish_add_path /usr/local/bin") != NULL);
+    ASSERT(strstr(data, "export PATH") == NULL);
+
+    /* Idempotent: a second call detects the existing fish line. */
+    int rc2 = cbm_ensure_path("/usr/local/bin", rcfile, false);
+    ASSERT_EQ(rc2, 1);
+
+    test_rmdir_r(tmpdir);
+    PASS();
+}
+
 /* ═══════════════════════════════════════════════════════════════════
  *  File copy tests (port of update_test.go)
  * ═══════════════════════════════════════════════════════════════════ */
@@ -2506,6 +2535,7 @@ SUITE(cli) {
     RUN_TEST(cli_ensure_path_append);
     RUN_TEST(cli_ensure_path_already_present);
     RUN_TEST(cli_ensure_path_dry_run);
+    RUN_TEST(cli_ensure_path_fish_syntax_issue319);
 
     /* File copy (2 tests — update_test.go) */
     RUN_TEST(cli_copy_file);

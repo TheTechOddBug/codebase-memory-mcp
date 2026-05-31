@@ -1905,8 +1905,19 @@ int cbm_ensure_path(const char *bin_dir, const char *rc_file, bool dry_run) {
         return CLI_ERR;
     }
 
+    /* fish uses a different syntax than POSIX shells: `export PATH="...:$PATH"`
+     * is a syntax error in fish and breaks config.fish (#319). When the target
+     * is a fish config, emit the fish-native `fish_add_path` (idempotent,
+     * prepends only if absent) instead. */
+    size_t rc_len = strlen(rc_file);
+    bool is_fish = rc_len >= CBM_SZ_5 && strcmp(rc_file + rc_len - CBM_SZ_5, ".fish") == 0;
+
     char line[CLI_BUF_1K];
-    snprintf(line, sizeof(line), "export PATH=\"%s:$PATH\"", bin_dir);
+    if (is_fish) {
+        snprintf(line, sizeof(line), "fish_add_path %s", bin_dir);
+    } else {
+        snprintf(line, sizeof(line), "export PATH=\"%s:$PATH\"", bin_dir);
+    }
 
     /* Check if already present in rc file */
     FILE *f = fopen(rc_file, "r");
