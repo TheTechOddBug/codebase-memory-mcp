@@ -1892,10 +1892,37 @@ static char *find_ini_section_name(CBMArena *a, TSNode node, const char *source)
 // HCL: extract block name from identifier child.
 static char *find_hcl_block_name(CBMArena *a, TSNode node, const char *source) {
     TSNode id = cbm_find_child_by_kind(node, "identifier");
-    if (!ts_node_is_null(id)) {
-        return cbm_node_text(a, id, source);
+    if (ts_node_is_null(id)) {
+        return NULL;
     }
-    return NULL;
+    char *name = cbm_node_text(a, id, source);
+    if (!name || !name[0]) {
+        return NULL;
+    }
+    // Append the block's quoted labels so each block gets a distinct,
+    // query-friendly name: resource "aws_instance" "web" -> resource.aws_instance.web
+    // rather than every resource collapsing to the bare keyword "resource" (#337).
+    // HCL stores labels as string_lit -> template_literal children.
+    uint32_t cc = ts_node_named_child_count(node);
+    for (uint32_t i = 0; i < cc; i++) {
+        TSNode ch = ts_node_named_child(node, i);
+        if (strcmp(ts_node_type(ch), "string_lit") != 0) {
+            continue;
+        }
+        TSNode lit = cbm_find_child_by_kind(ch, "template_literal");
+        if (ts_node_is_null(lit)) {
+            continue;
+        }
+        char *label = cbm_node_text(a, lit, source);
+        if (!label || !label[0]) {
+            continue;
+        }
+        char *joined = cbm_arena_sprintf(a, "%s.%s", name, label);
+        if (joined) {
+            name = joined;
+        }
+    }
+    return name;
 }
 
 // Handle config language class nodes (TOML, INI, XML, Markdown, HCL).

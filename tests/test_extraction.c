@@ -767,11 +767,15 @@ TEST(yaml_variables) {
 /* --- HCL --- */
 TEST(hcl_blocks) {
     CBMFileResult *r = extract("resource \"aws_instance\" \"web\" {\n  ami = \"abc-123\"\n  "
-                               "instance_type = \"t2.micro\"\n}\n",
+                               "instance_type = \"t2.micro\"\n}\n"
+                               "variable \"region\" {\n  default = \"us-east-1\"\n}\n",
                                CBM_LANG_HCL, "t", "main.tf");
     ASSERT_NOT_NULL(r);
     ASSERT_FALSE(r->has_error);
     ASSERT_GT(r->defs.count, 0);
+    /* Block labels are folded into the name so blocks are distinguishable (#337). */
+    ASSERT(has_def(r, "Class", "resource.aws_instance.web"));
+    ASSERT(has_def(r, "Class", "variable.region"));
     cbm_free_result(r);
     PASS();
 }
