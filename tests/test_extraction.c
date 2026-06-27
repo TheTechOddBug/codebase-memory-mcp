@@ -630,7 +630,7 @@ TEST(rust_struct) {
                                CBM_LANG_RUST, "t", "point.rs");
     ASSERT_NOT_NULL(r);
     ASSERT_FALSE(r->has_error);
-    ASSERT(has_def(r, "Class", "Point"));
+    ASSERT(has_def(r, "Struct", "Point"));
     ASSERT(has_def(r, "Method", "new"));
     cbm_free_result(r);
     PASS();
@@ -655,7 +655,7 @@ TEST(go_struct) {
                                CBM_LANG_GO, "t", "server.go");
     ASSERT_NOT_NULL(r);
     ASSERT_FALSE(r->has_error);
-    ASSERT(has_def(r, "Class", "Server"));
+    ASSERT(has_def(r, "Struct", "Server"));
     ASSERT(has_def(r, "Method", "Start"));
     cbm_free_result(r);
     PASS();

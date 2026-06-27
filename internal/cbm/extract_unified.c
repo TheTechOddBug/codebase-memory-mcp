@@ -451,16 +451,6 @@ static void handle_string_refs(CBMExtractCtx *ctx, TSNode node, const WalkState 
         return;
     }
 
-    /* YAML leaf values are emitted by walk_yaml_mapping (handle_yaml_nested),
-     * which carries the dotted key_path needed by the #521 upstream/config-URL
-     * deny check in try_upsert_infra_route. Emitting them here too would create a
-     * duplicate string_ref with key_path == NULL that bypasses that deny check and
-     * mints a spurious Route node for config/upstream/healthcheck URLs. Skip YAML
-     * here so the key_path-aware walk remains the single authority. */
-    if (ctx->language == CBM_LANG_YAML) {
-        return;
-    }
-
     /* Extract string content */
     char *text = cbm_node_text(ctx->arena, node, ctx->source);
     if (!text || !text[0]) {
